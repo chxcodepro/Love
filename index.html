@@ -1,0 +1,407 @@
+<!-- 基本的HTML结构 -->
+<html>
+
+<head>
+    <!-- 设置文档编码为UTF-8 -->
+    <meta charset="utf-8">
+    <!-- 页面标题 -->
+    <title>QKR LOVE CHX</title>
+    <!-- 设置语言为中文 -->
+    <meta name="language" content="zh-CN">
+    <!-- 设置标题为CHX -->
+    <meta name="title" content="CHX">
+    <!-- 引入CSS样式文件 -->
+    <link href="css/hovertreewelcome.css" type="text/css" rel="stylesheet">
+</head>
+
+<body>
+    <!-- 主容器 -->
+    <div id="hovertreecontainer">
+        <div>
+            <!-- 标题文本 -->
+            <h1 id="h1">to:可可酱</h1>
+            <br>
+            <h2 id="h2">The stars want to be with you forever</h2>
+            <br>
+            <h3 id="h3">©2024-2025 星星@可可</h3>
+            </script>
+            <!-- 空白段落用于布局 -->
+            <p>&nbsp;</p>
+            <p>&nbsp;</p>
+            <p>&nbsp;</p>
+            <p>&nbsp;</p>
+            <p>&nbsp;</p>
+            <p>&nbsp;</p>
+        </div>
+    </div>
+
+    <!-- Canvas元素用于绘制动画 -->
+    <canvas id="canvas"></canvas>
+    <!-- 引入JavaScript文件 -->
+    <script type="text/javascript" src="js/hovertreewelcome.js">
+    </script>
+    <script type="text/javascript">
+        // 立即执行函数,创建独立作用域
+        ; (function (window) {
+            // 定义全局变量
+            var ctx, // canvas上下文
+                hue, // 色相控制器
+                logo, // logo图片
+                form,
+                buffer,
+                target = {}, // 鼠标位置
+                tendrils = [], // 触手数组
+                settings = {}; // 设置对象
+
+            // 初始化设置
+            settings.debug = true;
+            settings.friction = 0.5; // 摩擦力
+            settings.trails = 20; // 触手数量
+            settings.size = 50; // 触手大小
+            settings.dampening = 0.25; // 阻尼
+            settings.tension = 0.98; // 张力
+
+            Math.TWO_PI = Math.PI * 2;
+
+            // 振荡器类 - 用于控制色相变化
+            function Oscillator(options) {
+                this.init(options || {});
+            }
+
+            Oscillator.prototype = (function () {
+                var value = 0;
+                return {
+                    // 初始化振荡器参数
+                    init: function (options) {
+                        this.phase = options.phase || 0;
+                        this.offset = options.offset || 0;
+                        this.frequency = options.frequency || 0.001;
+                        this.amplitude = options.amplitude || 1;
+                    },
+                    // 更新振荡值
+                    update: function () {
+                        this.phase += this.frequency;
+                        value = this.offset + Math.sin(this.phase) * this.amplitude;
+                        return value;
+                    },
+                    // 获取当前值
+                    value: function () {
+                        return value;
+                    }
+                };
+            })();
+
+            // 触手类 - 创建动画效果
+            function Tendril(options) {
+                this.init(options || {});
+            }
+
+            Tendril.prototype = (function () {
+                // 节点类 - 构成触手的基本单位
+                function Node() {
+                    this.x = 0;
+                    this.y = 0;
+                    this.vy = 0;
+                    this.vx = 0;
+                }
+
+                return {
+                    // 初始化触手
+                    init: function (options) {
+                        this.spring = options.spring + (Math.random() * 0.1) - 0.05;
+                        this.friction = settings.friction + (Math.random() * 0.01) - 0.005;
+                        this.nodes = [];
+
+                        // 创建节点
+                        for (var i = 0, node; i < settings.size; i++) {
+                            node = new Node();
+                            node.x = target.x;
+                            node.y = target.y;
+                            this.nodes.push(node);
+                        }
+                    },
+
+                    // 更新触手位置
+                    update: function () {
+                        var spring = this.spring,
+                            node = this.nodes[0];
+
+                        // 更新首节点速度
+                        node.vx += (target.x - node.x) * spring;
+                        node.vy += (target.y - node.y) * spring;
+
+                        // 更新所有节点
+                        for (var prev, i = 0, n = this.nodes.length; i < n; i++) {
+                            node = this.nodes[i];
+
+                            if (i > 0) {
+                                prev = this.nodes[i - 1];
+                                // 计算节点间的弹性运动
+                                node.vx += (prev.x - node.x) * spring;
+                                node.vy += (prev.y - node.y) * spring;
+                                node.vx += prev.vx * settings.dampening;
+                                node.vy += prev.vy * settings.dampening;
+                            }
+
+                            // 应用摩擦力和更新位置
+                            node.vx *= this.friction;
+                            node.vy *= this.friction;
+                            node.x += node.vx;
+                            node.y += node.vy;
+
+                            spring *= settings.tension;
+                        }
+                    },
+
+                    // 绘制触手
+                    draw: function () {
+                        var x = this.nodes[0].x,
+                            y = this.nodes[0].y,
+                            a, b;
+
+                        ctx.beginPath();
+                        ctx.moveTo(x, y);
+
+                        // 使用二次贝塞尔曲线绘制平滑的触手
+                        for (var i = 1, n = this.nodes.length - 2; i < n; i++) {
+                            a = this.nodes[i];
+                            b = this.nodes[i + 1];
+                            x = (a.x + b.x) * 0.5;
+                            y = (a.y + b.y) * 0.5;
+
+                            ctx.quadraticCurveTo(a.x, a.y, x, y);
+                        }
+
+                        a = this.nodes[i];
+                        b = this.nodes[i + 1];
+
+                        ctx.quadraticCurveTo(a.x, a.y, b.x, b.y);
+                        ctx.stroke();
+                        ctx.closePath();
+                    }
+                };
+            })();
+
+            // 初始化函数
+            function init(event) {
+                // 移除初始事件监听器
+                document.removeEventListener('mousemove', init);
+                document.removeEventListener('touchstart', init);
+
+                // 添加交互事件监听器
+                document.addEventListener('mousemove', mousemove);
+                document.addEventListener('touchmove', mousemove);
+                document.addEventListener('touchstart', touchstart);
+
+                mousemove(event);
+                reset();
+                loop();
+            }
+
+            // 重置触手
+            function reset() {
+                tendrils = [];
+                // 创建多个触手实例
+                for (var i = 0; i < settings.trails; i++) {
+                    tendrils.push(new Tendril({
+                        spring: 0.45 + 0.025 * (i / settings.trails)
+                    }));
+                }
+            }
+
+            // 动画循环
+            function loop() {
+                if (!ctx.running) return;
+
+                // 设置绘制样式
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.fillStyle = 'rgba(8,5,16,0.4)';
+                ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.strokeStyle = 'hsla(' + Math.round(hue.update()) + ',90%,50%,0.25)';
+                ctx.lineWidth = 1;
+
+                // 调试信息
+                if (ctx.frame % 60 == 0) {
+                    console.log(hue.update(), Math.round(hue.update()), hue.phase, hue.offset, hue.frequency, hue.amplitude);
+                }
+
+                // 更新并绘制所有触手
+                for (var i = 0, tendril; i < settings.trails; i++) {
+                    tendril = tendrils[i];
+                    tendril.update();
+                    tendril.draw();
+                }
+
+                ctx.frame++;
+                ctx.stats.update();
+                requestAnimFrame(loop);
+            }
+
+            // 调整画布大小
+            function resize() {
+                ctx.canvas.width = window.innerWidth;
+                ctx.canvas.height = window.innerHeight;
+            }
+
+            // 开始动画
+            function start() {
+                if (!ctx.running) {
+                    ctx.running = true;
+                    loop();
+                }
+            }
+
+            // 停止动画
+            function stop() {
+                ctx.running = false;
+            }
+
+            // 鼠标移动处理
+            function mousemove(event) {
+                if (event.touches) {
+                    target.x = event.touches[0].pageX;
+                    target.y = event.touches[0].pageY;
+                } else {
+                    target.x = event.clientX
+                    target.y = event.clientY;
+                }
+                event.preventDefault();
+            }
+
+            // 触摸开始处理
+            function touchstart(event) {
+                if (event.touches.length == 1) {
+                    target.x = event.touches[0].pageX;
+                    target.y = event.touches[0].pageY;
+                }
+            }
+
+            // 键盘事件处理
+            function keyup(event) {
+                switch (event.keyCode) {
+                    case 32:
+                        save();
+                        break;
+                    default:
+                }
+            }
+
+            // 文字动画效果
+            function letters(id) {
+                var el = document.getElementById(id),
+                    letters = el.innerHTML.replace('&amp;', '&').split(''),
+                    heading = '';
+
+                // 为每个字母创建span标签
+                for (var i = 0, n = letters.length, letter; i < n; i++) {
+                    letter = letters[i].replace('&', '&amp');
+                    heading += letter.trim() ? '<span class="letter-' + i + '">' + letter + '</span>' : '&nbsp;';
+                }
+
+                el.innerHTML = heading;
+                setTimeout(function () {
+                    el.className = 'transition-in';
+                }, (Math.random() * 500) + 500);
+            }
+
+            // 保存画布内容
+            function save() {
+                if (!buffer) {
+                    buffer = document.createElement('canvas');
+                    buffer.width = screen.availWidth;
+                    buffer.height = screen.availHeight;
+                    buffer.ctx = buffer.getContext('2d');
+
+                    form = document.createElement('form');
+                    form.method = 'post';
+                    form.input = document.createElement('input');
+                    form.input.type = 'hidden';
+                    form.input.name = 'data';
+                    form.appendChild(form.input);
+
+                    document.body.appendChild(form);
+                }
+
+                // 绘制背景
+                buffer.ctx.fillStyle = 'rgba(8,5,16)';
+                buffer.ctx.fillRect(0, 0, buffer.width, buffer.height);
+
+                // 绘制画布内容
+                buffer.ctx.drawImage(canvas,
+                    Math.round(buffer.width / 2 - canvas.width / 2),
+                    Math.round(buffer.height / 2 - canvas.height / 2)
+                );
+
+                // 绘制logo
+                buffer.ctx.drawImage(logo,
+                    Math.round(buffer.width / 2 - logo.width / 4),
+                    Math.round(buffer.height / 2 - logo.height / 4),
+                    logo.width / 2,
+                    logo.height / 2
+                );
+
+                // 打开新窗口显示
+                window.open(buffer.toDataURL(), 'wallpaper', 'top=0,left=0,width=' + buffer.width + ',height=' + buffer.height);
+            }
+
+            // 请求动画帧兼容处理
+            window.requestAnimFrame = (function () {
+                return window.requestAnimationFrame || 
+                       window.webkitRequestAnimationFrame || 
+                       window.mozRequestAnimationFrame || 
+                       function (fn) { window.setTimeout(fn, 1000 / 60) };
+            })();
+
+            // 页面加载完成后初始化
+            window.onload = function () {
+                // 获取canvas上下文
+                ctx = document.getElementById('canvas').getContext('2d');
+                ctx.stats = new Stats();
+                ctx.running = true;
+                ctx.frame = 1;
+
+                // 加载logo
+                logo = new Image();
+                logo.src = 'ht' + 'tp://ho' + 'vertree.c' + 'om/themes/hvtimages/hvtlogo.p' + 'ng';
+
+                // 初始化色相控制器
+                hue = new Oscillator({
+                    phase: Math.random() * Math.TWO_PI,
+                    amplitude: 85,
+                    frequency: 0.0015,
+                    offset: 285
+                });
+
+                // 初始化文字动画
+                letters('h1');
+                letters('h2');
+                letters('h3');
+
+                // 添加事件监听器
+                document.addEventListener('mousemove', init);
+                document.addEventListener('touchstart', init);
+                document.body.addEventListener('orientationchange', resize);
+                window.addEventListener('resize', resize);
+                window.addEventListener('keyup', keyup);
+                window.addEventListener('focus', start);
+                window.addEventListener('blur', stop);
+
+                resize();
+
+                // 调试模式设置
+                if (window.DEBUG) {
+                    var gui = new dat.GUI();
+                    settings.gui.add(settings, 'trails', 1, 30).onChange(reset);
+                    settings.gui.add(settings, 'size', 25, 75).onFinishChange(reset);
+                    settings.gui.add(settings, 'friction', 0.45, 0.55).onFinishChange(reset);
+                    settings.gui.add(settings, 'dampening', 0.01, 0.4).onFinishChange(reset);
+                    settings.gui.add(settings, 'tension', 0.95, 0.999).onFinishChange(reset);
+                    document.body.appendChild(ctx.stats.domElement);
+                }
+            };
+        })(window);
+    </script>
+</body>
+
+</html>
